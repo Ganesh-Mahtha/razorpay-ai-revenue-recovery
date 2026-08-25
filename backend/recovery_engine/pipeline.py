@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from agent.diagnosis import PaymentDiagnosis, diagnose_payment
+from razorpay_adapter import payment_to_recovery_context
 from recommender import RecoveryRecommendation, generate_recommendation
 from scorer import RecoveryContext, RecoveryScore, calculate_recovery_score
 
@@ -80,4 +81,30 @@ def process_payment(
         diagnosis=diagnosis,
         score=score,
         recommendation=recommendation,
+    )
+
+def process_razorpay_payment(
+    payment: dict,
+    customer_success_count: int = 0,
+    hours_since_last_success: float | None = None,
+) -> RecoveryPipelineResult:
+    """
+    Process a Razorpay payment through the recovery pipeline.
+
+    The Razorpay payment is first converted into our internal
+    RecoveryContext. The existing recovery pipeline then handles
+    diagnosis, scoring, recommendation, and safety guardrails.
+    """
+
+    context = payment_to_recovery_context(
+        payment=payment,
+        customer_success_count=customer_success_count,
+        hours_since_last_success=hours_since_last_success,
+    )
+
+    return process_payment(
+        amount=context.amount,
+        customer_success_count=context.customer_success_count,
+        failure_type=context.failure_type,
+        hours_since_last_success=context.hours_since_last_success,
     )
