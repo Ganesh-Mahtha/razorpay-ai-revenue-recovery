@@ -33,8 +33,8 @@ def test_permanent_failure_is_not_recommended_for_retry():
     assert result.diagnosis.recoverability == "LOW"
     assert result.diagnosis.confidence == "HIGH"
 
-    assert result.recommendation.action == "DO_NOT_RETRY"
-    assert result.recommendation.guardrail_required is False
+    assert result.guardrail.action == "DO_NOT_RETRY"
+    assert result.guardrail.guardrail_triggered is True
 
 
 def test_uncertain_payment_requires_caution():

@@ -1,13 +1,26 @@
 from dataclasses import dataclass
 
 from agent.diagnosis import PaymentDiagnosis, diagnose_payment
+
+from backend.recovery_engine.action_executor import (
+    RecoveryActionResult,
+    execute_recovery_action,
+)
+
+from backend.recovery_engine.guardrails import (
+    GuardrailDecision,
+    apply_guardrails,
+)
+
 from backend.recovery_engine.razorpay_adapter import (
     payment_to_recovery_context,
 )
+
 from backend.recovery_engine.recommender import (
     RecoveryRecommendation,
     generate_recommendation,
 )
+
 from backend.recovery_engine.scorer import (
     RecoveryContext,
     RecoveryScore,
@@ -20,6 +33,8 @@ class RecoveryPipelineResult:
     diagnosis: PaymentDiagnosis
     score: RecoveryScore
     recommendation: RecoveryRecommendation
+    guardrail: GuardrailDecision
+    execution: RecoveryActionResult
 
 
 def process_payment(
@@ -33,27 +48,28 @@ def process_payment(
     Run a failed payment through the complete recovery pipeline.
 
     Flow:
+
         Payment context
             ↓
         Diagnosis
             ↓
         Recovery score
             ↓
-        Recovery recommendation
+        Recommendation
             ↓
         Safety guardrails
+            ↓
+        Action executor
 
-    Diagnosis interprets the payment context.
+    The scorer estimates recovery opportunity.
 
-    The deterministic scorer calculates recovery opportunity
-    using payment value, customer history, failure type,
-    and recency.
+    The recommender converts the score into an initial
+    recovery recommendation.
 
-    The recommender converts the score into an actionable
-    recommendation.
+    Guardrails have final authority over the action.
 
-    Safety guardrails can override the recommendation when
-    a payment should not be automatically retried.
+    The action executor operates in simulation mode and
+    does not perform a real payment retry.
     """
 
     # ---------------------------------------------------------
@@ -87,36 +103,38 @@ def process_payment(
     score = calculate_recovery_score(context)
 
     # ---------------------------------------------------------
-    # 4. Convert score into recommendation
+    # 4. Generate initial recommendation
     # ---------------------------------------------------------
 
     recommendation = generate_recommendation(score)
 
     # ---------------------------------------------------------
-    # 5. Apply safety overrides
+    # 5. Apply safety guardrails
     # ---------------------------------------------------------
 
-    # A known permanent failure must never be recommended
-    # for automated retry, even if other signals are strong.
-    if (
-        failure_type == "permanent_failure"
-        and diagnosis.confidence == "HIGH"
-    ):
-        recommendation = RecoveryRecommendation(
-            action="DO_NOT_RETRY",
-            title="Do not retry",
-            confidence="HIGH",
-            reason=(
-                "The payment failure appears permanent, so automated "
-                "retry is not recommended despite other positive signals."
-            ),
-            guardrail_required=False,
-        )
+    guardrail = apply_guardrails(
+        context=context,
+        recommendation=recommendation,
+    )
+
+    # ---------------------------------------------------------
+    # 6. Execute final action in simulation mode
+    # ---------------------------------------------------------
+
+    execution = execute_recovery_action(
+        guardrail,
+    )
+
+    # ---------------------------------------------------------
+    # 7. Return complete pipeline result
+    # ---------------------------------------------------------
 
     return RecoveryPipelineResult(
         diagnosis=diagnosis,
         score=score,
         recommendation=recommendation,
+        guardrail=guardrail,
+        execution=execution,
     )
 
 
@@ -127,24 +145,33 @@ def process_razorpay_payment(
     hours_since_last_success: float | None = None,
 ) -> RecoveryPipelineResult:
     """
-    Process a Razorpay payment through the recovery pipeline.
+    Process a Razorpay payment through the complete recovery pipeline.
 
-    The Razorpay payment is first converted into our internal
-    RecoveryContext. The existing recovery pipeline then handles
-    diagnosis, scoring, recommendation, and safety guardrails.
+    Razorpay payment data is first converted into our internal
+    recovery context.
+
+    Customer history is supplied separately.
+
+    The complete recovery engine then performs:
+
+        diagnosis
+        scoring
+        recommendation
+        guardrail evaluation
+        simulated action execution
     """
 
     context = payment_to_recovery_context(
-    payment=payment,
-    customer_success_count=customer_success_count,
-    customer_failed_count=customer_failed_count,
-    hours_since_last_success=hours_since_last_success,
+        payment=payment,
+        customer_success_count=customer_success_count,
+        customer_failed_count=customer_failed_count,
+        hours_since_last_success=hours_since_last_success,
     )
 
     return process_payment(
         amount=context.amount,
         customer_success_count=context.customer_success_count,
-        customer_failed_count=customer_failed_count,
+        customer_failed_count=context.customer_failed_count,
         failure_type=context.failure_type,
         hours_since_last_success=context.hours_since_last_success,
     )
