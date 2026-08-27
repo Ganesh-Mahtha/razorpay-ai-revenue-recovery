@@ -146,7 +146,7 @@ def diagnose_payment(
         and customer_success_count >= 1
     ):
         recoverability = "LOW"
-        confidence = "HIGH"
+        confidence = "MEDIUM"
 
         diagnosis = (
             "The payment has some positive recovery signals, "

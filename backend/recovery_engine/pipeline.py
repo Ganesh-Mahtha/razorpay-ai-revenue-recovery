@@ -45,7 +45,7 @@ def process_payment(
     hours_since_last_success: float,
 ) -> RecoveryPipelineResult:
     """
-    Run a failed payment through the complete recovery pipeline.
+    Run a payment through the complete RecoverAI pipeline.
 
     Flow:
 
@@ -53,27 +53,19 @@ def process_payment(
             ↓
         Diagnosis
             ↓
-        Recovery score
+        Deterministic scoring
             ↓
         Recommendation
             ↓
         Safety guardrails
             ↓
-        Action executor
+        Simulated action execution
 
-    The scorer estimates recovery opportunity.
-
-    The recommender converts the score into an initial
-    recovery recommendation.
-
-    Guardrails have final authority over the action.
-
-    The action executor operates in simulation mode and
-    does not perform a real payment retry.
+    The action executor never performs a real payment retry.
     """
 
     # ---------------------------------------------------------
-    # 1. Diagnose the payment
+    # 1. Diagnose payment
     # ---------------------------------------------------------
 
     diagnosis = diagnose_payment(
@@ -103,7 +95,7 @@ def process_payment(
     score = calculate_recovery_score(context)
 
     # ---------------------------------------------------------
-    # 4. Generate initial recommendation
+    # 4. Generate recommendation
     # ---------------------------------------------------------
 
     recommendation = generate_recommendation(score)
@@ -118,16 +110,10 @@ def process_payment(
     )
 
     # ---------------------------------------------------------
-    # 6. Execute final action in simulation mode
+    # 6. Execute final decision in simulation mode
     # ---------------------------------------------------------
 
-    execution = execute_recovery_action(
-        guardrail,
-    )
-
-    # ---------------------------------------------------------
-    # 7. Return complete pipeline result
-    # ---------------------------------------------------------
+    execution = execute_recovery_action(guardrail)
 
     return RecoveryPipelineResult(
         diagnosis=diagnosis,
@@ -145,20 +131,12 @@ def process_razorpay_payment(
     hours_since_last_success: float | None = None,
 ) -> RecoveryPipelineResult:
     """
-    Process a Razorpay payment through the complete recovery pipeline.
+    Process a real Razorpay payment through the complete
+    RecoverAI recovery pipeline.
 
-    Razorpay payment data is first converted into our internal
-    recovery context.
-
-    Customer history is supplied separately.
-
-    The complete recovery engine then performs:
-
-        diagnosis
-        scoring
-        recommendation
-        guardrail evaluation
-        simulated action execution
+    Razorpay-specific fields are first converted into the
+    internal RecoveryContext. The rest of the system then
+    operates independently of the Razorpay API.
     """
 
     context = payment_to_recovery_context(

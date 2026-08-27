@@ -1,9 +1,7 @@
 from fastapi import FastAPI
 
 from backend.razorpay_client import RazorpayClient
-from backend.recovery_engine.pipeline import (
-    process_razorpay_payment,
-)
+from backend.recovery_engine.pipeline import process_razorpay_payment
 from backend.recovery_engine.customer_history import (
     calculate_customer_history,
 )
@@ -45,16 +43,10 @@ def get_payment(payment_id: str):
 def analyze_payment(payment_id: str):
     client = RazorpayClient()
 
-    # ---------------------------------------------------------
     # 1. Fetch the real Razorpay payment
-    # ---------------------------------------------------------
-
     payment = client.fetch_payment(payment_id)
 
-    # ---------------------------------------------------------
-    # 2. Fetch recent Razorpay payment history
-    # ---------------------------------------------------------
-
+    # 2. Fetch recent payment history
     payment_collection = client.fetch_payments(
         count=100,
         skip=0,
@@ -62,36 +54,21 @@ def analyze_payment(payment_id: str):
 
     payments = payment_collection.get("items", [])
 
-    # ---------------------------------------------------------
     # 3. Calculate real customer history
-    # ---------------------------------------------------------
-
     history = calculate_customer_history(
         target_payment=payment,
         payments=payments,
     )
 
-    # ---------------------------------------------------------
-    # 4. Run the complete recovery pipeline
-    # ---------------------------------------------------------
-
+    # 4. Run the complete RecoverAI pipeline
     result = process_razorpay_payment(
         payment=payment,
-        customer_success_count=history[
-            "customer_success_count"
-        ],
-        customer_failed_count=history[
-            "customer_failed_count"
-        ],
-        hours_since_last_success=history[
-            "hours_since_last_success"
-        ],
+        customer_success_count=history["customer_success_count"],
+        customer_failed_count=history["customer_failed_count"],
+        hours_since_last_success=history["hours_since_last_success"],
     )
 
-    # ---------------------------------------------------------
-    # 5. Return complete RecoverAI decision
-    # ---------------------------------------------------------
-
+    # 5. Return a clean dashboard/API response
     return {
         "payment_id": payment_id,
         "customer_history": history,
