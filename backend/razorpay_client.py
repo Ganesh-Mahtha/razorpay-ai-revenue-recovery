@@ -26,9 +26,14 @@ class RazorpayClient:
         """Fetch a single Razorpay payment."""
         return self.client.payment.fetch(payment_id)
 
-    def fetch_payments(self):
+    def fetch_payments(self, count: int = 100, skip: int = 0):
         """Fetch recent Razorpay payments."""
-        return self.client.payment.all()
+        return self.client.payment.all(
+            {
+                "count": count,
+                "skip": skip,
+            }
+        )
 
     def fetch_order(self, order_id: str):
         """Fetch a single Razorpay order."""

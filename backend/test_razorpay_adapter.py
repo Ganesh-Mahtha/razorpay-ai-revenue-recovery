@@ -1,4 +1,4 @@
-from razorpay_adapter import (
+from backend.recovery_engine.razorpay_adapter import (
     map_failure_type,
     payment_to_recovery_context,
 )
@@ -52,6 +52,7 @@ def test_payment_is_converted_to_recovery_context():
     context = payment_to_recovery_context(
         payment,
         customer_success_count=6,
+        customer_failed_count=0,
         hours_since_last_success=6,
     )
 

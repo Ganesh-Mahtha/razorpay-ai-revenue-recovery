@@ -5,6 +5,7 @@ def test_high_recovery_payment_flows_through_pipeline():
     result = process_payment(
         amount=8499,
         customer_success_count=6,
+        customer_failed_count=0,
         failure_type="temporary_failure",
         hours_since_last_success=6,
     )
@@ -24,6 +25,7 @@ def test_permanent_failure_is_not_recommended_for_retry():
     result = process_payment(
         amount=8499,
         customer_success_count=6,
+        customer_failed_count=0,
         failure_type="permanent_failure",
         hours_since_last_success=6,
     )
@@ -39,6 +41,7 @@ def test_uncertain_payment_requires_caution():
     result = process_payment(
         amount=500,
         customer_success_count=0,
+        customer_failed_count=0,
         failure_type="unknown_failure",
         hours_since_last_success=72,
     )

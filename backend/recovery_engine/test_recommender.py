@@ -1,5 +1,5 @@
-from recommender import RecoveryRecommendation, generate_recommendation
-from scorer import RecoveryScore
+from backend.recovery_engine.recommender import RecoveryRecommendation, generate_recommendation
+from backend.recovery_engine.scorer import RecoveryScore
 
 
 def test_high_score_recommends_retry():

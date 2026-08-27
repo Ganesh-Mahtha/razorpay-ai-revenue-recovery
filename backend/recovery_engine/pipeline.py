@@ -1,9 +1,18 @@
 from dataclasses import dataclass
 
 from agent.diagnosis import PaymentDiagnosis, diagnose_payment
-from razorpay_adapter import payment_to_recovery_context
-from recommender import RecoveryRecommendation, generate_recommendation
-from scorer import RecoveryContext, RecoveryScore, calculate_recovery_score
+from backend.recovery_engine.razorpay_adapter import (
+    payment_to_recovery_context,
+)
+from backend.recovery_engine.recommender import (
+    RecoveryRecommendation,
+    generate_recommendation,
+)
+from backend.recovery_engine.scorer import (
+    RecoveryContext,
+    RecoveryScore,
+    calculate_recovery_score,
+)
 
 
 @dataclass
@@ -16,6 +25,7 @@ class RecoveryPipelineResult:
 def process_payment(
     amount: float,
     customer_success_count: int,
+    customer_failed_count: int,
     failure_type: str,
     hours_since_last_success: float,
 ) -> RecoveryPipelineResult:
@@ -30,36 +40,62 @@ def process_payment(
         Recovery score
             ↓
         Recovery recommendation
+            ↓
+        Safety guardrails
 
     Diagnosis interprets the payment context.
-    The deterministic scorer calculates recovery opportunity.
-    The recommender converts the score into an actionable recommendation.
+
+    The deterministic scorer calculates recovery opportunity
+    using payment value, customer history, failure type,
+    and recency.
+
+    The recommender converts the score into an actionable
+    recommendation.
+
+    Safety guardrails can override the recommendation when
+    a payment should not be automatically retried.
     """
 
+    # ---------------------------------------------------------
     # 1. Diagnose the payment
+    # ---------------------------------------------------------
+
     diagnosis = diagnose_payment(
         amount=amount,
         customer_success_count=customer_success_count,
-        failure_type=failure_type,
-        hours_since_last_success=int(hours_since_last_success),
-    )
-
-    # 2. Build deterministic scoring context
-    context = RecoveryContext(
-        amount=amount,
-        customer_success_count=customer_success_count,
+        customer_failed_count=customer_failed_count,
         failure_type=failure_type,
         hours_since_last_success=hours_since_last_success,
     )
 
+    # ---------------------------------------------------------
+    # 2. Build deterministic scoring context
+    # ---------------------------------------------------------
+
+    context = RecoveryContext(
+        amount=amount,
+        customer_success_count=customer_success_count,
+        customer_failed_count=customer_failed_count,
+        failure_type=failure_type,
+        hours_since_last_success=hours_since_last_success,
+    )
+
+    # ---------------------------------------------------------
     # 3. Calculate recovery opportunity
+    # ---------------------------------------------------------
+
     score = calculate_recovery_score(context)
 
+    # ---------------------------------------------------------
     # 4. Convert score into recommendation
+    # ---------------------------------------------------------
+
     recommendation = generate_recommendation(score)
 
+    # ---------------------------------------------------------
     # 5. Apply safety overrides
-    #
+    # ---------------------------------------------------------
+
     # A known permanent failure must never be recommended
     # for automated retry, even if other signals are strong.
     if (
@@ -83,9 +119,11 @@ def process_payment(
         recommendation=recommendation,
     )
 
+
 def process_razorpay_payment(
     payment: dict,
     customer_success_count: int = 0,
+    customer_failed_count: int = 0,
     hours_since_last_success: float | None = None,
 ) -> RecoveryPipelineResult:
     """
@@ -97,14 +135,16 @@ def process_razorpay_payment(
     """
 
     context = payment_to_recovery_context(
-        payment=payment,
-        customer_success_count=customer_success_count,
-        hours_since_last_success=hours_since_last_success,
+    payment=payment,
+    customer_success_count=customer_success_count,
+    customer_failed_count=customer_failed_count,
+    hours_since_last_success=hours_since_last_success,
     )
 
     return process_payment(
         amount=context.amount,
         customer_success_count=context.customer_success_count,
+        customer_failed_count=customer_failed_count,
         failure_type=context.failure_type,
         hours_since_last_success=context.hours_since_last_success,
     )

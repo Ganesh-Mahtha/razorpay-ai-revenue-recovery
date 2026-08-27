@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from scorer import RecoveryScore
+from .scorer import RecoveryScore
 
 
 @dataclass

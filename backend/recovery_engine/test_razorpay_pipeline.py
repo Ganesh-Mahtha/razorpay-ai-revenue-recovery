@@ -13,6 +13,7 @@ def test_razorpay_payment_flows_through_recovery_pipeline():
     result = process_razorpay_payment(
         payment=payment,
         customer_success_count=6,
+        customer_failed_count=0,
         hours_since_last_success=6,
     )
 
