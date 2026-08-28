@@ -104,9 +104,10 @@ def calculate_recovery_score(
 
     retryable_failures = {
         "temporary_failure",
-        "network_error",
         "bank_timeout",
-        "technical_error",
+        "timeout",
+        "network_timeout",
+        "gateway_timeout",
     }
 
     if context.failure_type in retryable_failures:
