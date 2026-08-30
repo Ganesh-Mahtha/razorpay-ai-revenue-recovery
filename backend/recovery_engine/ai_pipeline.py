@@ -1,5 +1,12 @@
 from dataclasses import dataclass
 
+from uuid import uuid4
+
+from backend.recovery_engine.audit_trail import (
+    AuditTrail,
+    create_audit_trail,
+)
+
 from backend.recovery_engine.action_executor import (
     RecoveryActionResult,
     execute_recovery_action,
@@ -8,6 +15,10 @@ from backend.recovery_engine.action_executor import (
 from backend.recovery_engine.ai_reasoner import (
     AIRecoveryAssessment,
     assess_payment_with_ai,
+)
+
+from backend.recovery_engine.decision_engine import (
+    make_recovery_decision,
 )
 
 from backend.recovery_engine.guardrails import (
@@ -27,6 +38,19 @@ from backend.recovery_engine.scorer import (
 )
 
 
+# ============================================================
+# ACTION PRIORITY
+# ============================================================
+#
+# Lower number = safer / more conservative action.
+#
+# Kept for backwards compatibility with the existing
+# reconciliation tests.
+#
+# The actual production reconciliation is now handled by
+# decision_engine.py.
+#
+
 ACTION_PRIORITY = {
     "DO_NOT_RETRY": 0,
     "HUMAN_REVIEW": 1,
@@ -43,20 +67,35 @@ ACTION_TITLES = {
 }
 
 
+# ============================================================
+# PIPELINE RESULT
+# ============================================================
+
+
 @dataclass
 class AIRecoveryPipelineResult:
     """
     Complete result of an AI-assisted recovery decision.
 
-    AI provides contextual reasoning.
+    Pipeline:
 
-    The deterministic scorer provides an independent
-    recovery opportunity assessment.
+        Payment context
+              ↓
+        AI reasoning
+              ↓
+        Deterministic scoring
+              ↓
+        Deterministic recommendation
+              ↓
+        Decision engine
+              ↓
+        Safety guardrails
+              ↓
+        Bounded execution
 
-    The reconciliation layer resolves disagreements
-    conservatively.
+    AI is advisory.
 
-    Guardrails retain final authority over execution.
+    The decision engine and guardrails retain final authority.
     """
 
     ai_assessment: AIRecoveryAssessment
@@ -66,6 +105,21 @@ class AIRecoveryPipelineResult:
     reconciliation_reason: str
     guardrail: GuardrailDecision
     execution: RecoveryActionResult
+    audit_trail: AuditTrail
+
+
+# ============================================================
+# LEGACY RECONCILIATION HELPER
+# ============================================================
+#
+# IMPORTANT:
+#
+# This function is retained because the existing
+# test_ai_reconciliation.py tests it directly.
+#
+# Production pipeline decisions are now handled by
+# decision_engine.make_recovery_decision().
+#
 
 
 def _reconcile_recommendations(
@@ -75,17 +129,33 @@ def _reconcile_recommendations(
     """
     Reconcile AI and deterministic recommendations.
 
-    The safer action wins whenever the two systems disagree.
+    The more conservative action wins whenever the two
+    systems disagree.
+
+    This helper is retained for backwards compatibility
+    with the existing reconciliation tests.
     """
 
-    ai_action = ai_action.upper()
-    deterministic_action = deterministic_action.upper()
+    ai_action = str(ai_action).upper()
+    deterministic_action = str(deterministic_action).upper()
+
+    # --------------------------------------------------------
+    # Invalid AI output
+    # --------------------------------------------------------
 
     if ai_action not in ACTION_PRIORITY:
         ai_action = "HUMAN_REVIEW"
 
+    # --------------------------------------------------------
+    # Invalid deterministic output
+    # --------------------------------------------------------
+
     if deterministic_action not in ACTION_PRIORITY:
         deterministic_action = "HUMAN_REVIEW"
+
+    # --------------------------------------------------------
+    # Agreement
+    # --------------------------------------------------------
 
     if ai_action == deterministic_action:
         return (
@@ -93,7 +163,15 @@ def _reconcile_recommendations(
             "AI and deterministic policy agree on the recovery action.",
         )
 
-    if ACTION_PRIORITY[ai_action] < ACTION_PRIORITY[deterministic_action]:
+    # --------------------------------------------------------
+    # Disagreement
+    #
+    # Lower priority number = more conservative action.
+    # --------------------------------------------------------
+
+    if ACTION_PRIORITY[ai_action] < ACTION_PRIORITY[
+        deterministic_action
+    ]:
         selected_action = ai_action
     else:
         selected_action = deterministic_action
@@ -110,6 +188,16 @@ def _reconcile_recommendations(
     )
 
 
+# ============================================================
+# LEGACY RECOMMENDATION BUILDER
+# ============================================================
+#
+# Retained for compatibility with existing code/tests.
+# The production pipeline now receives its final recommendation
+# directly from decision_engine.py.
+#
+
+
 def _build_reconciled_recommendation(
     action: str,
     ai_assessment: AIRecoveryAssessment,
@@ -117,9 +205,14 @@ def _build_reconciled_recommendation(
     reconciliation_reason: str,
 ) -> RecoveryRecommendation:
     """
-    Convert the reconciled action into the existing
+    Convert a reconciled action into the existing
     RecoveryRecommendation structure.
+
+    Retained for backwards compatibility.
     """
+
+    if action not in ACTION_TITLES:
+        action = "HUMAN_REVIEW"
 
     return RecoveryRecommendation(
         action=action,
@@ -130,13 +223,19 @@ def _build_reconciled_recommendation(
             f"AI assessment: {ai_assessment.reasoning}"
         ),
         guardrail_required=(
-            action in {
+            action
+            in {
                 "RETRY",
                 "RETRY_WITH_CAUTION",
                 "HUMAN_REVIEW",
             }
         ),
     )
+
+
+# ============================================================
+# MAIN AI PIPELINE
+# ============================================================
 
 
 def process_payment_with_ai(
@@ -147,33 +246,33 @@ def process_payment_with_ai(
     hours_since_last_success: float,
 ) -> AIRecoveryPipelineResult:
     """
-    Run a payment through the complete AI-assisted
-    RecoverAI recovery pipeline.
+    Run a payment through the complete RecoverAI pipeline.
 
-    Flow:
+    Production decision flow:
 
         Payment context
-            ↓
+              ↓
         AI reasoning
-            ↓
+              ↓
         Deterministic scoring
-            ↓
+              ↓
         Deterministic recommendation
-            ↓
-        AI/policy reconciliation
-            ↓
+              ↓
+        Decision engine
+              ↓
         Safety guardrails
-            ↓
-        Simulated execution
+              ↓
+        Bounded execution
 
-    AI is advisory.
+    AI is advisory only.
 
-    Guardrails retain final authority.
+    The decision engine determines the final proposed action.
+    Guardrails retain final authority over execution.
     """
 
-    # ---------------------------------------------------------
-    # 1. AI reasoning
-    # ---------------------------------------------------------
+    # ========================================================
+    # 1. AI REASONING
+    # ========================================================
 
     ai_assessment = assess_payment_with_ai(
         amount=amount,
@@ -183,9 +282,9 @@ def process_payment_with_ai(
         hours_since_last_success=hours_since_last_success,
     )
 
-    # ---------------------------------------------------------
-    # 2. Build deterministic recovery context
-    # ---------------------------------------------------------
+    # ========================================================
+    # 2. BUILD DETERMINISTIC RECOVERY CONTEXT
+    # ========================================================
 
     context = RecoveryContext(
         amount=amount,
@@ -195,21 +294,28 @@ def process_payment_with_ai(
         hours_since_last_success=hours_since_last_success,
     )
 
-    # ---------------------------------------------------------
-    # 3. Calculate deterministic recovery score
-    # ---------------------------------------------------------
+    # ========================================================
+    # 3. CALCULATE DETERMINISTIC RECOVERY SCORE
+    # ========================================================
 
     score = calculate_recovery_score(context)
 
-    # ---------------------------------------------------------
-    # 4. Generate deterministic recommendation
-    # ---------------------------------------------------------
+    # ========================================================
+    # 4. GENERATE DETERMINISTIC RECOMMENDATION
+    # ========================================================
 
     recommendation = generate_recommendation(score)
 
-    # ---------------------------------------------------------
-    # 5. Reconcile AI and deterministic recommendations
-    # ---------------------------------------------------------
+        # ========================================================
+    # 5. AI + DETERMINISTIC RECONCILIATION
+    # ========================================================
+    #
+    # This produces the proposed action BEFORE the final
+    # safety guardrail is applied.
+    #
+    # The reconciliation layer is intentionally advisory.
+    # Guardrails still have final authority.
+    #
 
     reconciled_action, reconciliation_reason = (
         _reconcile_recommendations(
@@ -218,32 +324,92 @@ def process_payment_with_ai(
         )
     )
 
-    # ---------------------------------------------------------
-    # 6. Convert reconciliation into existing recommendation
-    #    structure
-    # ---------------------------------------------------------
+    # ========================================================
+    # 6. DECISION ENGINE
+    # ========================================================
+    #
+    # The decision engine provides the policy-aware decision.
+    #
+    # This does NOT replace the guardrail layer.
+    #
 
-    guardrail_recommendation = _build_reconciled_recommendation(
-        action=reconciled_action,
+    decision = make_recovery_decision(
+        context=context,
+        score=score,
         ai_assessment=ai_assessment,
-        deterministic_recommendation=recommendation,
-        reconciliation_reason=reconciliation_reason,
     )
 
-    # ---------------------------------------------------------
-    # 7. Apply deterministic safety guardrails
-    # ---------------------------------------------------------
+    # ========================================================
+    # 7. BUILD GUARDRAIL RECOMMENDATION
+    # ========================================================
+    #
+    # The decision engine's bounded action is passed into
+    # the guardrail layer.
+    #
+    # IMPORTANT:
+    #
+    # reconciled_action above represents the intermediate
+    # AI/deterministic reconciliation.
+    #
+    # decision.action represents the policy-aware action
+    # that is sent toward the safety boundary.
+    #
+
+    guardrail_recommendation = RecoveryRecommendation(
+        action=decision.action,
+        title=decision.title,
+        confidence=decision.confidence,
+        reason=decision.reason,
+        guardrail_required=decision.guardrail_required,
+    )
+
+    # ========================================================
+    # 8. APPLY SAFETY GUARDRAILS
+    # ========================================================
+    #
+    # Guardrails retain final authority.
+    #
+    # Example:
+    #
+    # AI                  -> RETRY
+    # Deterministic       -> RETRY_WITH_CAUTION
+    # Reconciled          -> RETRY_WITH_CAUTION
+    # Decision engine     -> DO_NOT_RETRY
+    # Guardrail           -> DO_NOT_RETRY
+    #
+    # A permanent failure can therefore never reach retry
+    # execution.
+    #
 
     guardrail = apply_guardrails(
         context=context,
         recommendation=guardrail_recommendation,
     )
 
-    # ---------------------------------------------------------
-    # 8. Execute final bounded decision
-    # ---------------------------------------------------------
+    # ========================================================
+    # 9. EXECUTE FINAL BOUNDED DECISION
+    # ========================================================
 
     execution = execute_recovery_action(guardrail)
+
+    audit_trail = create_audit_trail(
+        audit_id=f"rec_{uuid4().hex[:12]}",
+        amount=amount,
+        customer_success_count=customer_success_count,
+        customer_failed_count=customer_failed_count,
+        failure_type=failure_type,
+        hours_since_last_success=hours_since_last_success,
+        ai_assessment=ai_assessment,
+        score=score,
+        recommendation=recommendation,
+        decision=decision,
+        guardrail=guardrail,
+        execution=execution,
+    )
+
+    # ========================================================
+    # 10. RETURN COMPLETE PIPELINE RESULT
+    # ========================================================
 
     return AIRecoveryPipelineResult(
         ai_assessment=ai_assessment,
@@ -253,4 +419,5 @@ def process_payment_with_ai(
         reconciliation_reason=reconciliation_reason,
         guardrail=guardrail,
         execution=execution,
+        audit_trail=audit_trail,
     )

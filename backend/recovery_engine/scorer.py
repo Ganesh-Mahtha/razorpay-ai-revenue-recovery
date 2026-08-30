@@ -27,7 +27,15 @@ def calculate_recovery_score(
     Calculate an explainable recovery opportunity score.
 
     This is deterministic by design.
-    AI will sit above this layer later.
+
+    The scorer provides:
+    - recovery score
+    - recovery tier
+    - deterministic recommended action
+    - confidence
+    - explainable reasons
+
+    AI reasoning happens in a separate layer.
     """
 
     score = 0
@@ -38,7 +46,10 @@ def calculate_recovery_score(
         + context.customer_failed_count
     )
 
-    # Calculate historical success rate.
+    # ---------------------------------------------------------
+    # Customer historical success rate
+    # ---------------------------------------------------------
+
     if total_customer_payments > 0:
         success_rate = (
             context.customer_success_count
@@ -68,34 +79,55 @@ def calculate_recovery_score(
     # ---------------------------------------------------------
 
     if total_customer_payments == 0:
-        reasons.append("No previous customer payment history")
+        reasons.append(
+            "No previous customer payment history"
+        )
 
-    elif success_rate >= 0.75 and context.customer_success_count >= 3:
+    elif (
+        success_rate >= 0.75
+        and context.customer_success_count >= 3
+    ):
         score += 30
-        reasons.append("Strong successful payment history")
+        reasons.append(
+            "Strong successful payment history"
+        )
 
     elif success_rate >= 0.50:
         score += 20
-        reasons.append("Moderate successful payment history")
+        reasons.append(
+            "Moderate successful payment history"
+        )
 
     elif context.customer_success_count >= 1:
         score += 8
-        reasons.append("Limited successful payment history")
+        reasons.append(
+            "Limited successful payment history"
+        )
 
     else:
-        reasons.append("No successful payment history")
+        reasons.append(
+            "No successful payment history"
+        )
 
-    # Penalize customers with a high historical failure rate.
+    # ---------------------------------------------------------
+    # Historical failure-rate penalty
+    # ---------------------------------------------------------
+
     if total_customer_payments >= 3:
+
         if success_rate < 0.25:
             score -= 15
-            reasons.append("High historical payment failure rate")
+            reasons.append(
+                "High historical payment failure rate"
+            )
 
         elif success_rate < 0.50:
             score -= 8
-            reasons.append("Elevated historical payment failure rate")
+            reasons.append(
+                "Elevated historical payment failure rate"
+            )
 
-    # Keep score within 0–100.
+    # Keep score within bounds.
     score = max(0, min(score, 100))
 
     # ---------------------------------------------------------
@@ -112,11 +144,15 @@ def calculate_recovery_score(
 
     if context.failure_type in retryable_failures:
         score += 30
-        reasons.append("Failure appears retryable")
+        reasons.append(
+            "Failure appears retryable"
+        )
 
     elif context.failure_type == "permanent_failure":
         score -= 20
-        reasons.append("Failure appears permanent")
+        reasons.append(
+            "Failure appears permanent"
+        )
 
     else:
         reasons.append(
@@ -129,20 +165,24 @@ def calculate_recovery_score(
 
     if context.hours_since_last_success <= 24:
         score += 20
-        reasons.append("Recent successful payment")
+        reasons.append(
+            "Recent successful payment"
+        )
 
     elif context.hours_since_last_success <= 72:
         score += 12
-        reasons.append("Recent customer activity")
+        reasons.append(
+            "Recent customer activity"
+        )
 
     elif context.hours_since_last_success != float("inf"):
         score += 5
 
-    # Keep score within 0–100 after all adjustments.
+    # Final score bounds.
     score = max(0, min(score, 100))
 
     # ---------------------------------------------------------
-    # 5. Determine tier and action
+    # 5. Determine tier, action and confidence
     # ---------------------------------------------------------
 
     if score >= 75:
@@ -159,6 +199,10 @@ def calculate_recovery_score(
         tier = "LOW"
         recommended_action = "DO_NOT_RETRY"
         confidence = "LOW"
+
+    # ---------------------------------------------------------
+    # 6. Return complete deterministic score
+    # ---------------------------------------------------------
 
     return RecoveryScore(
         score=score,
