@@ -107,6 +107,25 @@ class AIRecoveryPipelineResult:
     execution: RecoveryActionResult
     audit_trail: AuditTrail
 
+    @property
+    def diagnosis(self) -> AIRecoveryAssessment:
+        """
+        Backwards-compatible alias for older integrations.
+
+        Older pipeline consumers expect:
+
+            result.diagnosis.recoverability
+
+        The AI pipeline now stores this information under:
+
+            result.ai_assessment
+
+        Keeping this alias lets existing tests and integrations
+        continue working without duplicating data.
+        """
+
+        return self.ai_assessment
+
 
 # ============================================================
 # LEGACY RECONCILIATION HELPER

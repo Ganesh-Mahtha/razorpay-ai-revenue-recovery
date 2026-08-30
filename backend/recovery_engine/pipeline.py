@@ -7,6 +7,11 @@ from backend.recovery_engine.action_executor import (
     execute_recovery_action,
 )
 
+from backend.recovery_engine.ai_pipeline import (
+    AIRecoveryPipelineResult,
+    process_payment_with_ai,
+)
+
 from backend.recovery_engine.guardrails import (
     GuardrailDecision,
     apply_guardrails,
@@ -30,6 +35,16 @@ from backend.recovery_engine.scorer import (
 
 @dataclass
 class RecoveryPipelineResult:
+    """
+    Result returned by the legacy deterministic pipeline.
+
+    This structure is retained for backwards compatibility
+    with the existing deterministic tests.
+
+    The real Razorpay integration now uses the AI-assisted
+    pipeline through process_razorpay_payment().
+    """
+
     diagnosis: PaymentDiagnosis
     score: RecoveryScore
     recommendation: RecoveryRecommendation
@@ -45,7 +60,10 @@ def process_payment(
     hours_since_last_success: float,
 ) -> RecoveryPipelineResult:
     """
-    Run a payment through the complete RecoverAI pipeline.
+    Run a payment through the legacy deterministic pipeline.
+
+    This function is intentionally preserved for backwards
+    compatibility with the existing test suite.
 
     Flow:
 
@@ -60,8 +78,6 @@ def process_payment(
         Safety guardrails
             ↓
         Simulated action execution
-
-    The action executor never performs a real payment retry.
     """
 
     # ---------------------------------------------------------
@@ -129,15 +145,40 @@ def process_razorpay_payment(
     customer_success_count: int = 0,
     customer_failed_count: int = 0,
     hours_since_last_success: float | None = None,
-) -> RecoveryPipelineResult:
+) -> AIRecoveryPipelineResult:
     """
     Process a real Razorpay payment through the complete
-    RecoverAI recovery pipeline.
+    AI-assisted RecoverAI pipeline.
 
     Razorpay-specific fields are first converted into the
-    internal RecoveryContext. The rest of the system then
-    operates independently of the Razorpay API.
+    internal RecoveryContext.
+
+    The payment is then passed through:
+
+        Razorpay payment
+              ↓
+        Recovery context
+              ↓
+        AI reasoning
+              ↓
+        Deterministic scoring
+              ↓
+        Decision engine
+              ↓
+        Safety guardrails
+              ↓
+        Bounded execution
+              ↓
+        Audit trail
+
+    AI remains advisory.
+
+    The decision engine and guardrails retain final authority.
     """
+
+    # =========================================================
+    # 1. Convert Razorpay payment into internal context
+    # =========================================================
 
     context = payment_to_recovery_context(
         payment=payment,
@@ -146,7 +187,11 @@ def process_razorpay_payment(
         hours_since_last_success=hours_since_last_success,
     )
 
-    return process_payment(
+    # =========================================================
+    # 2. Run the production AI-assisted pipeline
+    # =========================================================
+
+    return process_payment_with_ai(
         amount=context.amount,
         customer_success_count=context.customer_success_count,
         customer_failed_count=context.customer_failed_count,

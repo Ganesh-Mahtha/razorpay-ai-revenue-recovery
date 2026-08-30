@@ -54,10 +54,16 @@ def get_payment(payment_id: str):
 def analyze_payment(payment_id: str):
     client = RazorpayClient()
 
+    # =========================================================
     # 1. Fetch the real Razorpay payment
+    # =========================================================
+
     payment = client.fetch_payment(payment_id)
 
+    # =========================================================
     # 2. Fetch recent payment history
+    # =========================================================
+
     payment_collection = client.fetch_payments(
         count=100,
         skip=0,
@@ -65,13 +71,19 @@ def analyze_payment(payment_id: str):
 
     payments = payment_collection.get("items", [])
 
+    # =========================================================
     # 3. Calculate real customer history
+    # =========================================================
+
     history = calculate_customer_history(
         target_payment=payment,
         payments=payments,
     )
 
+    # =========================================================
     # 4. Run the complete RecoverAI pipeline
+    # =========================================================
+
     result = process_razorpay_payment(
         payment=payment,
         customer_success_count=history["customer_success_count"],
@@ -79,13 +91,92 @@ def analyze_payment(payment_id: str):
         hours_since_last_success=history["hours_since_last_success"],
     )
 
-    # 5. Return a clean dashboard/API response
-    return {
+    # =========================================================
+    # 5. Return the COMPLETE decision path
+    # =========================================================
+    #
+    # Important:
+    #
+    # AI assessment
+    #       ↓
+    # deterministic score
+    #       ↓
+    # recommendation
+    #       ↓
+    # decision engine
+    #       ↓
+    # guardrail
+    #       ↓
+    # execution
+    #       ↓
+    # audit trail
+    #
+    # The frontend receives the complete chain so that
+    # judges can see WHY RecoverAI made its decision.
+    #
+
+    response = {
         "payment_id": payment_id,
         "customer_history": history,
-        "diagnosis": result.diagnosis,
+
+        # -----------------------------------------------------
+        # AI reasoning
+        # -----------------------------------------------------
+
+        "ai_assessment": result.ai_assessment,
+
+        # -----------------------------------------------------
+        # Deterministic scoring
+        # -----------------------------------------------------
+
         "score": result.score,
+
+        # -----------------------------------------------------
+        # Deterministic recommendation
+        # -----------------------------------------------------
+
         "recommendation": result.recommendation,
+
+        # -----------------------------------------------------
+        # AI + policy reconciliation
+        # -----------------------------------------------------
+
+        "reconciled_action": result.reconciled_action,
+        "reconciliation_reason": (
+            result.reconciliation_reason
+        ),
+
+        # -----------------------------------------------------
+        # Safety guardrail
+        # -----------------------------------------------------
+
         "guardrail": result.guardrail,
+
+        # -----------------------------------------------------
+        # Bounded execution
+        # -----------------------------------------------------
+
         "execution": result.execution,
     }
+
+    # ---------------------------------------------------------
+    # Audit trail
+    # ---------------------------------------------------------
+    #
+    # Only expose this if the current pipeline already attaches
+    # an audit trail to the result.
+    #
+    # getattr keeps this API backward-compatible while we finish
+    # wiring the audit layer into the pipeline.
+    #
+
+    audit_trail = getattr(
+        result,
+        "audit_trail",
+        None,
+    )
+
+    if audit_trail is not None:
+        response["audit_trail"] = audit_trail
+
+    return response
