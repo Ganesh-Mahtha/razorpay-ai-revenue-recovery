@@ -145,40 +145,8 @@ def process_razorpay_payment(
     customer_success_count: int = 0,
     customer_failed_count: int = 0,
     hours_since_last_success: float | None = None,
+    retry_count: int = 0,
 ) -> AIRecoveryPipelineResult:
-    """
-    Process a real Razorpay payment through the complete
-    AI-assisted RecoverAI pipeline.
-
-    Razorpay-specific fields are first converted into the
-    internal RecoveryContext.
-
-    The payment is then passed through:
-
-        Razorpay payment
-              ↓
-        Recovery context
-              ↓
-        AI reasoning
-              ↓
-        Deterministic scoring
-              ↓
-        Decision engine
-              ↓
-        Safety guardrails
-              ↓
-        Bounded execution
-              ↓
-        Audit trail
-
-    AI remains advisory.
-
-    The decision engine and guardrails retain final authority.
-    """
-
-    # =========================================================
-    # 1. Convert Razorpay payment into internal context
-    # =========================================================
 
     context = payment_to_recovery_context(
         payment=payment,
@@ -187,9 +155,7 @@ def process_razorpay_payment(
         hours_since_last_success=hours_since_last_success,
     )
 
-    # =========================================================
-    # 2. Run the production AI-assisted pipeline
-    # =========================================================
+    context.retry_count = retry_count
 
     return process_payment_with_ai(
         amount=context.amount,
@@ -197,4 +163,5 @@ def process_razorpay_payment(
         customer_failed_count=context.customer_failed_count,
         failure_type=context.failure_type,
         hours_since_last_success=context.hours_since_last_success,
+        retry_count=context.retry_count,
     )

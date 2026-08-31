@@ -9,6 +9,7 @@ class RecoveryContext:
     customer_failed_count: int
     failure_type: str
     hours_since_last_success: float
+    retry_count: int = 0
 
 
 @dataclass

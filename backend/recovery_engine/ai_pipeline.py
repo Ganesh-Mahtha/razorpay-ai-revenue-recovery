@@ -263,6 +263,7 @@ def process_payment_with_ai(
     customer_failed_count: int,
     failure_type: str,
     hours_since_last_success: float,
+    retry_count: int = 0,
 ) -> AIRecoveryPipelineResult:
     """
     Run a payment through the complete RecoverAI pipeline.
@@ -282,11 +283,24 @@ def process_payment_with_ai(
         Safety guardrails
               ↓
         Bounded execution
+              ↓
+        Audit trail
 
     AI is advisory only.
 
     The decision engine determines the final proposed action.
     Guardrails retain final authority over execution.
+
+    Retry safety:
+
+        retry_count >= 1
+              ↓
+        automatic retry is blocked
+              ↓
+        human review is required
+
+    The retry stopping rule is deterministic and cannot
+    be overridden by the AI.
     """
 
     # ========================================================
@@ -311,6 +325,7 @@ def process_payment_with_ai(
         customer_failed_count=customer_failed_count,
         failure_type=failure_type,
         hours_since_last_success=hours_since_last_success,
+        retry_count=retry_count,
     )
 
     # ========================================================
@@ -325,7 +340,7 @@ def process_payment_with_ai(
 
     recommendation = generate_recommendation(score)
 
-        # ========================================================
+    # ========================================================
     # 5. AI + DETERMINISTIC RECONCILIATION
     # ========================================================
     #
@@ -349,7 +364,8 @@ def process_payment_with_ai(
     #
     # The decision engine provides the policy-aware decision.
     #
-    # This does NOT replace the guardrail layer.
+    # The retry stopping rule is enforced here before an
+    # automatic retry can proceed.
     #
 
     decision = make_recovery_decision(
@@ -391,13 +407,13 @@ def process_payment_with_ai(
     # Example:
     #
     # AI                  -> RETRY
-    # Deterministic       -> RETRY_WITH_CAUTION
-    # Reconciled          -> RETRY_WITH_CAUTION
-    # Decision engine     -> DO_NOT_RETRY
-    # Guardrail           -> DO_NOT_RETRY
+    # Deterministic       -> RETRY
+    # Reconciled          -> RETRY
+    # Retry limit         -> HUMAN_REVIEW
+    # Guardrail           -> HUMAN_REVIEW
     #
-    # A permanent failure can therefore never reach retry
-    # execution.
+    # A payment that has already been automatically retried
+    # therefore cannot receive another automatic retry.
     #
 
     guardrail = apply_guardrails(
@@ -410,6 +426,10 @@ def process_payment_with_ai(
     # ========================================================
 
     execution = execute_recovery_action(guardrail)
+
+    # ========================================================
+    # 10. CREATE AUDIT TRAIL
+    # ========================================================
 
     audit_trail = create_audit_trail(
         audit_id=f"rec_{uuid4().hex[:12]}",
@@ -427,7 +447,7 @@ def process_payment_with_ai(
     )
 
     # ========================================================
-    # 10. RETURN COMPLETE PIPELINE RESULT
+    # 11. RETURN COMPLETE PIPELINE RESULT
     # ========================================================
 
     return AIRecoveryPipelineResult(

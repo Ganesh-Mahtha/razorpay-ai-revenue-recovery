@@ -30,6 +30,28 @@ def apply_guardrails(
 
     guardrail_reasons = []
 
+    # ---------------------------------------------------------
+    # Guardrail 0 — Retry stopping rule
+    # ---------------------------------------------------------
+
+    if context.retry_count >= 1:
+        guardrail_reasons.append(
+            "Automatic retry limit has already been reached."
+        )
+
+        return GuardrailDecision(
+            action="HUMAN_REVIEW",
+            title="Review payment manually",
+            confidence="HIGH",
+            reason=(
+                "The payment has already received an automated "
+                "retry attempt. Another automatic retry is blocked "
+                "by the retry stopping rule."
+            ),
+            guardrail_triggered=True,
+            guardrail_reasons=guardrail_reasons,
+        )
+
     total_customer_payments = (
         context.customer_success_count
         + context.customer_failed_count

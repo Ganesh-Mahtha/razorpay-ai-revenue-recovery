@@ -167,6 +167,9 @@ def analyze_payment(payment_id: str):
         hours_since_last_success=(
             history["hours_since_last_success"]
         ),
+        retry_count=int(
+            payment.get("retry_count", 0)
+        ),
     )
 
     # -----------------------------------------------------

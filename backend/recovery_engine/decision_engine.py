@@ -114,6 +114,29 @@ def make_recovery_decision(
     # =========================================================
 
     # ---------------------------------------------------------
+    # Retry stopping rule
+    # ---------------------------------------------------------
+    #
+    # A payment must not be automatically retried more than
+    # once. This is a deterministic safety boundary and cannot
+    # be overridden by the AI.
+    #
+
+    if context.retry_count >= 1:
+
+        return DecisionResult(
+            action="HUMAN_REVIEW",
+            title=ACTION_TITLES["HUMAN_REVIEW"],
+            confidence="HIGH",
+            reason=(
+                "The payment has already received an automated "
+                "retry attempt. The retry limit has been reached, "
+                "so another automated retry is not allowed."
+            ),
+            guardrail_required=True,
+        )
+
+    # ---------------------------------------------------------
     # Permanent failure
     # ---------------------------------------------------------
 
