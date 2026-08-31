@@ -1,0 +1,90 @@
+{
+  "total_cases": 100,
+  "revenue": {
+    "total_at_risk": 543100.0,
+    "recoverable_at_risk": 420100.0,
+    "recovery_opportunity": 410100.0,
+    "safely_blocked": 123000.0,
+    "opportunity_rate": 97.61961437752916
+  },
+  "accuracy": {
+    "final": 85.0,
+    "ai": 84.0,
+    "deterministic": 22.0
+  },
+  "recovery": {
+    "recoverable_cases": 68,
+    "retry_opportunities": 58,
+    "recall": 85.29411764705883
+  },
+  "safety": {
+    "non_recoverable_cases": 32,
+    "safely_prevented_retries": 32,
+    "safety_rate": 100.0,
+    "unsafe_final_retries": 0
+  },
+  "ai_safety": {
+    "unsafe_recommendations": 0,
+    "unsafe_recommendations_prevented": 0,
+    "prevention_rate": 0.0
+  },
+  "guardrails": {
+    "triggered": 32,
+    "not_triggered": 68,
+    "trigger_rate": 32.0
+  },
+  "policy": {
+    "ai_policy_agreements": 38,
+    "ai_policy_disagreements": 62,
+    "agreement_rate": 38.0,
+    "decisions_changed": 62,
+    "decision_change_rate": 62.0,
+    "disagreement_pairs": {
+      "RETRY_WITH_CAUTION -> RETRY": 11,
+      "RETRY_WITH_CAUTION -> DO_NOT_RETRY": 10,
+      "DO_NOT_RETRY -> RETRY_WITH_CAUTION": 15,
+      "HUMAN_REVIEW -> RETRY_WITH_CAUTION": 16,
+      "HUMAN_REVIEW -> DO_NOT_RETRY": 10
+    }
+  },
+  "classification": {
+    "precision": {
+      "RETRY": 58.333333333333336,
+      "RETRY_WITH_CAUTION": 100.0,
+      "DO_NOT_RETRY": 100.0,
+      "HUMAN_REVIEW": 100.0
+    },
+    "recall": {
+      "RETRY": 100.0,
+      "RETRY_WITH_CAUTION": 59.45945945945946,
+      "DO_NOT_RETRY": 100.0,
+      "HUMAN_REVIEW": 100.0
+    },
+    "confusion_matrix": {
+      "RETRY": {
+        "RETRY": 21,
+        "RETRY_WITH_CAUTION": 0,
+        "DO_NOT_RETRY": 0,
+        "HUMAN_REVIEW": 0
+      },
+      "RETRY_WITH_CAUTION": {
+        "RETRY": 15,
+        "RETRY_WITH_CAUTION": 22,
+        "DO_NOT_RETRY": 0,
+        "HUMAN_REVIEW": 0
+      },
+      "DO_NOT_RETRY": {
+        "RETRY": 0,
+        "RETRY_WITH_CAUTION": 0,
+        "DO_NOT_RETRY": 16,
+        "HUMAN_REVIEW": 0
+      },
+      "HUMAN_REVIEW": {
+        "RETRY": 0,
+        "RETRY_WITH_CAUTION": 0,
+        "DO_NOT_RETRY": 0,
+        "HUMAN_REVIEW": 26
+      }
+    }
+  }
+}

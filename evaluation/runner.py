@@ -12,6 +12,7 @@ from evaluation.dataset import (
 from evaluation.metrics import (
     EvaluationMetrics,
     calculate_metrics,
+    metrics_to_dict,
     print_metrics,
 )
 
@@ -20,9 +21,7 @@ def _case_key(case: EvaluationCase) -> tuple:
     """
     Return the complete payment context used by the AI pipeline.
 
-    Cases with the same context produce the same evaluation input,
-    so they can safely reuse the same pipeline result during
-    synthetic batch evaluation.
+    Cases with the same context can reuse the same AI result.
     """
 
     return (
@@ -34,33 +33,23 @@ def _case_key(case: EvaluationCase) -> tuple:
     )
 
 
-def run_evaluation() -> Tuple[
+def run_evaluation(
+    cases: List[EvaluationCase],
+) -> Tuple[
     List[EvaluationCase],
     List[Any],
 ]:
     """
-    Run the complete RecoverAI evaluation dataset.
+    Evaluate an arbitrary list of EvaluationCase objects.
 
-    IMPORTANT:
-
-    The synthetic dataset intentionally contains repeated scenarios.
-    We therefore evaluate each UNIQUE payment context only once.
-
-    This prevents unnecessary duplicate LLM API calls while still
-    producing one result for every evaluation case.
-
-    Example:
-
-        100 cases
-            ↓
-        12 unique contexts
-            ↓
-        12 AI pipeline executions
-            ↓
-        results mapped back to all 100 cases
+    Unique payment contexts are evaluated once and then mapped
+    back to all cases.
     """
 
-    cases = build_evaluation_dataset()
+    if not cases:
+        raise ValueError(
+            "Cannot run evaluation on an empty dataset."
+        )
 
     results: List[Any] = []
 
@@ -70,11 +59,10 @@ def run_evaluation() -> Tuple[
 
     print(f"Total cases: {len(cases)}")
 
-    # ---------------------------------------------------------
-    # Build unique evaluation contexts
-    # ---------------------------------------------------------
-
-    unique_cases: Dict[tuple, EvaluationCase] = {}
+    unique_cases: Dict[
+        tuple,
+        EvaluationCase,
+    ] = {}
 
     for case in cases:
         key = _case_key(case)
@@ -83,11 +71,13 @@ def run_evaluation() -> Tuple[
             unique_cases[key] = case
 
     print(
-        f"Unique contexts: {len(unique_cases)}"
+        f"Unique contexts: "
+        f"{len(unique_cases)}"
     )
 
     print(
-        f"AI pipeline calls required: {len(unique_cases)}"
+        f"AI pipeline calls required: "
+        f"{len(unique_cases)}"
     )
 
     print(
@@ -96,14 +86,15 @@ def run_evaluation() -> Tuple[
     )
 
     print()
-    print("Running unique evaluation contexts...")
+    print(
+        "Running unique evaluation contexts..."
+    )
     print()
 
-    # ---------------------------------------------------------
-    # Evaluate each unique context exactly once
-    # ---------------------------------------------------------
-
-    result_cache: Dict[tuple, Any] = {}
+    result_cache: Dict[
+        tuple,
+        Any,
+    ] = {}
 
     for index, case in enumerate(
         unique_cases.values(),
@@ -120,7 +111,6 @@ def run_evaluation() -> Tuple[
         )
 
         try:
-
             result = process_payment_with_ai(
                 amount=case.amount,
                 customer_success_count=(
@@ -136,7 +126,6 @@ def run_evaluation() -> Tuple[
             )
 
         except Exception as exc:
-
             raise RuntimeError(
                 f"Evaluation failed for "
                 f"{case.case_id}: "
@@ -167,10 +156,6 @@ def run_evaluation() -> Tuple[
 
         print()
 
-    # ---------------------------------------------------------
-    # Map cached results back to all 100 cases
-    # ---------------------------------------------------------
-
     for case in cases:
 
         key = _case_key(case)
@@ -195,11 +180,59 @@ def run_evaluation() -> Tuple[
     return cases, results
 
 
-def print_evaluation_header() -> None:
+def run_synthetic_evaluation() -> Tuple[
+    List[EvaluationCase],
+    List[Any],
+]:
     """
-    Print the evaluation methodology.
+    Run the built-in 100-case synthetic dataset.
     """
 
+    cases = build_evaluation_dataset()
+
+    return run_evaluation(cases)
+
+
+def run_evaluation_metrics(
+    cases: List[EvaluationCase],
+) -> EvaluationMetrics:
+    """
+    Evaluate supplied cases and calculate metrics.
+    """
+
+    evaluated_cases, results = run_evaluation(
+        cases
+    )
+
+    return calculate_metrics(
+        evaluated_cases,
+        results,
+    )
+
+
+def run_synthetic_evaluation_metrics() -> EvaluationMetrics:
+    """
+    Evaluate the built-in synthetic dataset.
+    """
+
+    cases = build_evaluation_dataset()
+
+    return run_evaluation_metrics(cases)
+
+
+def run_evaluation_summary(
+    cases: List[EvaluationCase],
+) -> Dict[str, Any]:
+    """
+    Evaluate supplied cases and return JSON metrics.
+    """
+
+    metrics = run_evaluation_metrics(cases)
+
+    return metrics_to_dict(metrics)
+
+
+def print_evaluation_header() -> None:
     print()
     print("=" * 60)
     print("RECOVERAI EVALUATION")
@@ -224,18 +257,9 @@ def print_evaluation_header() -> None:
 
 
 def main() -> None:
-    """
-    Run the complete evaluation and print metrics.
-    """
-
     print_evaluation_header()
 
-    cases, results = run_evaluation()
-
-    metrics: EvaluationMetrics = calculate_metrics(
-        cases,
-        results,
-    )
+    metrics = run_synthetic_evaluation_metrics()
 
     print_metrics(metrics)
 

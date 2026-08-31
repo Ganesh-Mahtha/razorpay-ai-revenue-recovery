@@ -1950,3 +1950,464 @@ button:focus-visible {
     flex: 1;
   }
 }
+
+/* =========================================================
+   RECOVERAI — DECISION TRACE POLISH
+   ========================================================= */
+
+.decision-trace {
+  position: relative;
+  margin-top: 18px;
+  padding: 22px 22px 8px;
+  background: linear-gradient(180deg, #fbfcff 0%, #ffffff 100%);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+}
+
+.decision-trace-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.decision-trace-header h3 {
+  margin: 0;
+  color: var(--neutral-950);
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.2px;
+}
+
+.decision-trace-header p {
+  margin: 5px 0 0;
+  color: var(--neutral-600);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.trace-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 13px;
+  min-height: 66px;
+}
+
+.trace-step::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 34px;
+  bottom: -8px;
+  width: 1px;
+  background: var(--neutral-200);
+}
+
+.trace-step:last-child::before {
+  display: none;
+}
+
+.trace-step-icon {
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--neutral-200);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--primary-700);
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.trace-step-content {
+  min-width: 0;
+  padding: 1px 0 18px;
+}
+
+.trace-step-content strong {
+  display: block;
+  color: var(--neutral-950);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.trace-step-content span {
+  display: block;
+  margin-top: 4px;
+  color: var(--neutral-600);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.trace-connector {
+  display: flex;
+  justify-content: center;
+  height: 14px;
+  color: var(--neutral-400);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.ai-decision-badge,
+.policy-decision-badge,
+.guardrail-decision-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+}
+
+.ai-decision-badge {
+  border: 1px solid #dbe7ff;
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+.policy-decision-badge {
+  border: 1px solid var(--neutral-200);
+  background: var(--neutral-50);
+  color: var(--neutral-700);
+}
+
+.guardrail-decision-badge {
+  border: 1px solid #c8ecd8;
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
+.audit-trail-card {
+  margin-top: 14px;
+  padding: 20px 22px;
+}
+
+.audit-trail-card .audit-id {
+  color: var(--neutral-800);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.ai-vs-policy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.ai-vs-policy > div {
+  padding: 15px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.ai-vs-policy span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--neutral-500);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.ai-vs-policy strong {
+  color: var(--neutral-950);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+@media (max-width: 900px) {
+  .ai-vs-policy {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   EVALUATION & IMPACT
+   ========================================================= */
+
+.evaluation-page {
+  padding-bottom: 48px;
+}
+
+.evaluation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.evaluation-header h2 {
+  margin: 5px 0 7px;
+  font-size: 25px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--neutral-900);
+}
+
+.evaluation-header p {
+  max-width: 650px;
+  margin: 0;
+  color: var(--neutral-600);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.section-eyebrow {
+  color: var(--primary-600);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.evaluation-badge {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--neutral-300);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--neutral-800);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.evaluation-section {
+  margin-bottom: 26px;
+}
+
+.evaluation-section-title {
+  margin-bottom: 10px;
+  color: var(--neutral-800);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evaluation-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.impact-metric {
+  min-height: 116px;
+  padding: 18px;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  box-shadow: var(--shadow-card);
+}
+
+.impact-metric-value {
+  margin-bottom: 8px;
+  color: var(--neutral-900);
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.impact-metric-label {
+  color: var(--neutral-600);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.impact-metric-emphasis {
+  border-color: #b8c8f5;
+  background: var(--primary-050);
+}
+
+.impact-metric-emphasis .impact-metric-value {
+  color: var(--primary-700);
+}
+
+.impact-metric-success {
+  border-color: #b9dfbd;
+  background: var(--success-050);
+}
+
+.impact-metric-success .impact-metric-value {
+  color: var(--success-600);
+}
+
+.evaluation-control-card {
+  padding: 22px;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  box-shadow: var(--shadow-card);
+}
+
+.control-flow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.control-step {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.control-step-number {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primary-050);
+  color: var(--primary-700);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.control-step strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--neutral-900);
+  font-size: 12px;
+}
+
+.control-step p {
+  margin: 0;
+  color: var(--neutral-600);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.control-arrow {
+  flex-shrink: 0;
+  color: var(--neutral-300);
+  font-size: 18px;
+}
+
+.policy-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 22px;
+  border-top: 1px solid var(--neutral-300);
+  background: var(--neutral-300);
+}
+
+.policy-summary > div {
+  padding: 16px;
+  background: var(--white);
+}
+
+.policy-summary strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--neutral-900);
+  font-size: 20px;
+}
+
+.policy-summary span {
+  color: var(--neutral-600);
+  font-size: 10px;
+}
+
+.evaluation-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 17px;
+  border: 1px solid #b9dfbd;
+  border-radius: var(--radius-md);
+  background: var(--success-050);
+}
+
+.evaluation-callout-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--success-600);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evaluation-callout strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--neutral-900);
+  font-size: 12px;
+}
+
+.evaluation-callout p {
+  margin: 0;
+  color: var(--neutral-600);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.evaluation-loading,
+.evaluation-empty {
+  padding: 40px;
+}
+
+.evaluation-empty h2 {
+  margin: 0 0 8px;
+  color: var(--neutral-900);
+  font-size: 18px;
+}
+
+.evaluation-empty p {
+  margin: 0;
+  color: var(--neutral-600);
+  font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .evaluation-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .control-flow {
+    flex-wrap: wrap;
+  }
+
+  .control-step {
+    min-width: calc(50% - 20px);
+  }
+
+  .control-arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .evaluation-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluation-header {
+    flex-direction: column;
+  }
+
+  .control-step {
+    min-width: 100%;
+  }
+
+  .policy-summary {
+    grid-template-columns: 1fr;
+  }
+}

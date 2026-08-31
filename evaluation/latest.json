@@ -1,0 +1,92 @@
+{
+  "source": "uploaded_csv",
+  "filename": "test_upload.csv",
+  "created_at": "20260831T084343Z",
+  "cases": 6,
+  "summary": {
+    "total_cases": 6,
+    "revenue": {
+      "total_at_risk": 14600.0,
+      "recoverable_at_risk": 8700.0,
+      "recovery_opportunity": 8700.0,
+      "safely_blocked": 5900.0,
+      "opportunity_rate": 100.0
+    },
+    "accuracy": {
+      "final": 83.33333333333334,
+      "ai": 83.33333333333334,
+      "deterministic": 66.66666666666666
+    },
+    "recovery": {
+      "recoverable_cases": 3,
+      "retry_opportunities": 3,
+      "recall": 100.0
+    },
+    "safety": {
+      "non_recoverable_cases": 3,
+      "safely_prevented_retries": 3,
+      "safety_rate": 100.0,
+      "unsafe_final_retries": 0
+    },
+    "ai_safety": {
+      "unsafe_recommendations": 0,
+      "unsafe_recommendations_prevented": 0,
+      "prevention_rate": 0.0
+    },
+    "guardrails": {
+      "triggered": 3,
+      "not_triggered": 3,
+      "trigger_rate": 50.0
+    },
+    "policy": {
+      "ai_policy_agreements": 5,
+      "ai_policy_disagreements": 1,
+      "agreement_rate": 83.33333333333334,
+      "decisions_changed": 1,
+      "decision_change_rate": 16.666666666666664,
+      "disagreement_pairs": {
+        "HUMAN_REVIEW -> DO_NOT_RETRY": 1
+      }
+    },
+    "classification": {
+      "precision": {
+        "RETRY": 66.66666666666666,
+        "RETRY_WITH_CAUTION": 0.0,
+        "DO_NOT_RETRY": 100.0,
+        "HUMAN_REVIEW": 100.0
+      },
+      "recall": {
+        "RETRY": 100.0,
+        "RETRY_WITH_CAUTION": 0.0,
+        "DO_NOT_RETRY": 100.0,
+        "HUMAN_REVIEW": 100.0
+      },
+      "confusion_matrix": {
+        "RETRY": {
+          "RETRY": 2,
+          "RETRY_WITH_CAUTION": 0,
+          "DO_NOT_RETRY": 0,
+          "HUMAN_REVIEW": 0
+        },
+        "RETRY_WITH_CAUTION": {
+          "RETRY": 1,
+          "RETRY_WITH_CAUTION": 0,
+          "DO_NOT_RETRY": 0,
+          "HUMAN_REVIEW": 0
+        },
+        "DO_NOT_RETRY": {
+          "RETRY": 0,
+          "RETRY_WITH_CAUTION": 0,
+          "DO_NOT_RETRY": 2,
+          "HUMAN_REVIEW": 0
+        },
+        "HUMAN_REVIEW": {
+          "RETRY": 0,
+          "RETRY_WITH_CAUTION": 0,
+          "DO_NOT_RETRY": 0,
+          "HUMAN_REVIEW": 1
+        }
+      }
+    }
+  }
+}

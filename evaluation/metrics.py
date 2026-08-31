@@ -2,7 +2,6 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
-
 from .dataset import EvaluationCase
 
 
@@ -728,6 +727,7 @@ def print_metrics(
         for pair, count in sorted(
             metrics.disagreement_pairs.items()
         ):
+
             print(
                 f"  {pair}: {count}"
             )
@@ -866,3 +866,143 @@ def print_metrics(
     print("=" * 60)
     print("END OF EVALUATION REPORT")
     print("=" * 60)
+
+
+def metrics_to_dict(
+    metrics: EvaluationMetrics,
+) -> Dict[str, Any]:
+    """
+    Convert evaluation metrics into a JSON-serializable
+    dictionary suitable for the API and frontend.
+
+    This exposes both business impact and model/safety metrics.
+
+    This function does not perform evaluation and does not
+    influence any recovery decision.
+    """
+
+    return {
+        # -----------------------------------------------------
+        # Evaluation
+        # -----------------------------------------------------
+
+        "total_cases": metrics.total_cases,
+
+        # -----------------------------------------------------
+        # Business impact
+        # -----------------------------------------------------
+
+        "revenue": {
+            "total_at_risk": metrics.total_revenue_at_risk,
+            "recoverable_at_risk": (
+                metrics.recoverable_revenue_at_risk
+            ),
+            "recovery_opportunity": (
+                metrics.recoverable_revenue_receiving_retry_opportunity
+            ),
+            "safely_blocked": metrics.revenue_safely_blocked,
+            "opportunity_rate": (
+                metrics.revenue_recovery_opportunity_rate
+            ),
+        },
+
+        # -----------------------------------------------------
+        # Model performance
+        # -----------------------------------------------------
+
+        "accuracy": {
+            "final": metrics.exact_action_accuracy,
+            "ai": metrics.ai_exact_accuracy,
+            "deterministic": (
+                metrics.deterministic_exact_accuracy
+            ),
+        },
+
+        # -----------------------------------------------------
+        # Recovery performance
+        # -----------------------------------------------------
+
+        "recovery": {
+            "recoverable_cases": metrics.recoverable_cases,
+            "retry_opportunities": (
+                metrics.recoverable_retry_opportunities
+            ),
+            "recall": metrics.recovery_recall,
+        },
+
+        # -----------------------------------------------------
+        # Safety
+        # -----------------------------------------------------
+
+        "safety": {
+            "non_recoverable_cases": (
+                metrics.non_recoverable_cases
+            ),
+            "safely_prevented_retries": (
+                metrics.safely_prevented_retries
+            ),
+            "safety_rate": metrics.safety_rate,
+            "unsafe_final_retries": metrics.unsafe_retry_count,
+        },
+
+        # -----------------------------------------------------
+        # AI safety
+        # -----------------------------------------------------
+
+        "ai_safety": {
+            "unsafe_recommendations": (
+                metrics.unsafe_ai_recommendations
+            ),
+            "unsafe_recommendations_prevented": (
+                metrics.unsafe_ai_recommendations_prevented
+            ),
+            "prevention_rate": (
+                metrics.ai_unsafe_prevention_rate
+            ),
+        },
+
+        # -----------------------------------------------------
+        # Guardrails
+        # -----------------------------------------------------
+
+        "guardrails": {
+            "triggered": metrics.guardrail_triggered,
+            "not_triggered": metrics.guardrail_not_triggered,
+            "trigger_rate": metrics.guardrail_trigger_rate,
+        },
+
+        # -----------------------------------------------------
+        # AI / deterministic policy relationship
+        # -----------------------------------------------------
+
+        "policy": {
+            "ai_policy_agreements": (
+                metrics.ai_policy_agreements
+            ),
+            "ai_policy_disagreements": (
+                metrics.ai_policy_disagreements
+            ),
+            "agreement_rate": (
+                metrics.ai_policy_agreement_rate
+            ),
+            "decisions_changed": (
+                metrics.ai_decisions_changed
+            ),
+            "decision_change_rate": (
+                metrics.ai_decision_change_rate
+            ),
+            "disagreement_pairs": (
+                metrics.disagreement_pairs
+            ),
+        },
+
+        # -----------------------------------------------------
+        # Per-action classification
+        # -----------------------------------------------------
+
+        "classification": {
+            "precision": metrics.action_precision,
+            "recall": metrics.action_recall,
+            "confusion_matrix": metrics.confusion_matrix,
+        },
+    }
