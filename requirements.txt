@@ -2,3 +2,6 @@ pytest
 fastapi
 uvicorn
 python-multipart
+openai
+razorpay
+python-dotenv
